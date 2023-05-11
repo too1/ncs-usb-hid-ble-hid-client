@@ -1,15 +1,26 @@
-.. _usb_hid:
-
-USB HID Sample Application
-##########################
+USB HID combined with BLE HID Client Sample
+###########################################
 
 Overview
 ********
 
-This sample app demonstrates use of a USB Human Interface Device (HID) driver
+This is a combination of two SDK samples, the USB HID sample and the bluetooth_central_hids sample. 
+
+The USB HID sample demonstrates use of a USB Human Interface Device (HID) driver
 by the Zephyr project.  This very simple driver is enumerated as a raw HID
 device. This sample can be found under :zephyr_file:`samples/subsys/usb/hid` in the
 Zephyr project tree.
+
+The Central HIDS sample demonstrates how to use the HID over GATT profile to interact with a HIDS server.
+Basically, the sample simulates a computer that connects to a mouse or a keyboard.
+The sample scans available devices, searching for a HIDS server.
+If any HIDS server is found, the sample connects to it and discovers all characteristics.
+
+If any input reports are detected, the sample subscribes to them to receive notifications.
+If any boot reports are detected, the behavior depends on if they are boot mouse reports or boot keyboard reports:
+
+* If a boot mouse report is detected, the sample subscribes to it.
+* If a boot keyboard report is detected, the sample subscribes to its input report, and the sample functionality of changing the CAPSLOCK LED is enabled (Button 1 and 3).
 
 Requirements
 ************
