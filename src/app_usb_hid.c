@@ -10,11 +10,11 @@ LOG_MODULE_REGISTER(app_usb_hid);
 
 static bool configured;
 static const struct device *hdev;
-static struct k_work report_send;
+static struct k_work work_send_report;
 static ATOMIC_DEFINE(hid_ep_in_busy, 1);
 
 #define HID_EP_BUSY_FLAG	0
-#define REPORT_ID_1		0x01
+#define REPORT_ID_1			0x01
 #define REPORT_PERIOD		K_SECONDS(2)
 
 static struct report {
@@ -24,9 +24,6 @@ static struct report {
 	.id = REPORT_ID_1,
 	.value = 0,
 };
-
-static void report_event_handler(struct k_timer *dummy);
-static K_TIMER_DEFINE(event_timer, report_event_handler, NULL);
 
 /*
  * Simple HID Report Descriptor
@@ -86,14 +83,7 @@ static void int_in_ready_cb(const struct device *dev)
 static void on_idle_cb(const struct device *dev, uint16_t report_id)
 {
 	LOG_DBG("On idle callback");
-	k_work_submit(&report_send);
-}
-
-static void report_event_handler(struct k_timer *dummy)
-{
-	/* Increment reported data */
-	report_1.value++;
-	k_work_submit(&report_send);
+	k_work_submit(&work_send_report);
 }
 
 static void protocol_cb(const struct device *dev, uint8_t protocol)
@@ -138,7 +128,7 @@ int app_usb_hid_init(void)
 		return ret;
 	}
 
-	k_work_init(&report_send, send_report);
+	k_work_init(&work_send_report, send_report);
 
 	LOG_DBG("USB HID initialized");
 
@@ -147,6 +137,9 @@ int app_usb_hid_init(void)
 
 int app_usb_hid_send_report(struct app_usb_hid_report *report)
 {
+	report_1.value = report->data;
+	k_work_submit(&work_send_report);
+
 	return 0;
 }
 
@@ -164,7 +157,6 @@ static int composite_pre_init(const struct device *dev)
 				&ops);
 
 	atomic_set_bit(hid_ep_in_busy, HID_EP_BUSY_FLAG);
-	k_timer_start(&event_timer, REPORT_PERIOD, REPORT_PERIOD);
 
 	if (usb_hid_set_proto_code(hdev, HID_BOOT_IFACE_CODE_NONE)) {
 		LOG_WRN("Failed to set Protocol Code");
